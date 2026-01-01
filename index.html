@@ -1,0 +1,762 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Escape the Upside Down</title>
+  <meta name="description" content="A Stranger Things-inspired escape room." />
+  <style>
+    :root{
+      --bg:#07060a;
+      --panel:#0f0d16;
+      --text:#eeeaff;
+      --muted:#bcb6db;
+      --red:#ff2d55;
+      --cyan:#3ddcff;
+      --good:#59ffa0;
+      --warn:#ffd24a;
+      --border:rgba(255,255,255,.12);
+      --shadow:0 18px 50px rgba(0,0,0,.6);
+      --radius:18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      color:var(--text);
+      min-height:100vh;
+      background:
+        radial-gradient(900px 600px at 70% -10%, rgba(255,45,85,.16), transparent 55%),
+        radial-gradient(900px 650px at 10% 0%, rgba(61,220,255,.10), transparent 60%),
+        radial-gradient(800px 600px at 70% 120%, rgba(255,210,74,.08), transparent 55%),
+        linear-gradient(180deg, #05040a 0%, #080615 45%, #05040a 100%);
+      overflow-x:hidden;
+    }
+    .scanlines:before{
+      content:"";
+      position:fixed; inset:0;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(255,255,255,.05) 0px,
+        rgba(255,255,255,.05) 1px,
+        rgba(0,0,0,0) 3px,
+        rgba(0,0,0,0) 7px
+      );
+      opacity:.12;
+      pointer-events:none;
+      mix-blend-mode:overlay;
+      z-index:9999;
+    }
+    header{
+      position:sticky; top:0; z-index:10;
+      backdrop-filter: blur(10px);
+      background: linear-gradient(180deg, rgba(7,6,10,.92), rgba(7,6,10,.55));
+      border-bottom:1px solid var(--border);
+    }
+    .wrap{max-width:980px;margin:0 auto;padding:16px}
+    .top{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{
+      width:44px;height:44px;border-radius:14px;
+      background:
+        radial-gradient(circle at 35% 30%, rgba(255,45,85,.9), rgba(255,45,85,0) 55%),
+        radial-gradient(circle at 70% 70%, rgba(61,220,255,.85), rgba(61,220,255,0) 55%),
+        linear-gradient(135deg, #1c1530, #0f0d16);
+      border:1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    h1{margin:0;font-size:18px;letter-spacing:.4px}
+    .sub{margin:2px 0 0;color:var(--muted);font-size:12px}
+    .pillrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .pill{
+      font-family:var(--mono);
+      font-size:12px;
+      padding:8px 10px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      background: rgba(255,255,255,.04);
+      color:var(--muted);
+      white-space:nowrap;
+    }
+    .pill strong{color:var(--text)}
+    .btn{
+      appearance:none;border:none;cursor:pointer;
+      padding:10px 12px;border-radius:12px;
+      background: rgba(255,255,255,.06);
+      color:var(--text);
+      border:1px solid var(--border);
+      transition:.15s transform,.15s background;
+      font-weight:750;
+    }
+    .btn:hover{transform:translateY(-1px);background: rgba(255,255,255,.09)}
+    .btn:active{transform:translateY(0px)}
+    .btn.red{
+      background: linear-gradient(135deg, rgba(255,45,85,.95), rgba(255,45,85,.45));
+      border-color: rgba(255,45,85,.55);
+    }
+    .btn.cyan{
+      background: linear-gradient(135deg, rgba(61,220,255,.9), rgba(61,220,255,.35));
+      border-color: rgba(61,220,255,.55);
+      color:#061017;
+      font-weight:900;
+    }
+    .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+    main{padding:18px 0 44px}
+    .grid{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:16px;
+      align-items:start;
+    }
+    @media (max-width: 920px){ .grid{grid-template-columns:1fr} }
+    .card{
+      background: rgba(15,13,22,.78);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .hd{
+      padding:16px 16px 12px;
+      border-bottom:1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+    }
+    .bd{padding:16px}
+    .title{margin:0 0 6px;font-size:15px;font-weight:950;letter-spacing:.3px}
+    .hint{margin:0;color:var(--muted);font-size:12px;line-height:1.45}
+    .divider{height:1px;background:var(--border);margin:14px 0}
+    .screen{
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:18px;
+      background: rgba(0,0,0,.28);
+      overflow:hidden;
+    }
+    .screenTop{
+      display:flex;justify-content:space-between;gap:10px;align-items:center;
+      padding:12px 12px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+    }
+    .sceneName{font-weight:900;font-size:12px;letter-spacing:.6px;color:rgba(233,230,255,.9)}
+    .meterRow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .meter{
+      display:flex;gap:8px;align-items:center;
+      font-family:var(--mono);font-size:11px;color:var(--muted);
+      padding:6px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.25);
+      white-space:nowrap;
+    }
+    .bar{
+      width:90px;height:8px;border-radius:999px;
+      background: rgba(255,255,255,.10);
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.10);
+    }
+    .fill{height:100%;width:50%;background:rgba(255,45,85,.8)}
+    .fill.safe{background:rgba(89,255,160,.8)}
+    .screenBody{padding:14px 14px 12px}
+    .story{
+      font-size:14px;line-height:1.65;
+      margin:0;
+      white-space:pre-wrap;
+    }
+    .choices{
+      padding:12px 14px 14px;
+      border-top:1px solid rgba(255,255,255,.10);
+      display:grid;
+      gap:10px;
+    }
+    .choiceBtn{
+      width:100%;
+      text-align:left;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color:var(--text);
+      cursor:pointer;
+      transition:.15s transform,.15s background,.15s border;
+      font-weight:800;
+    }
+    .choiceBtn:hover{transform:translateY(-1px);background: rgba(255,255,255,.07);border-color: rgba(255,255,255,.18)}
+    .choiceBtn:active{transform:translateY(0px)}
+    .choiceBtn.red{border-color: rgba(255,45,85,.35)}
+    .choiceBtn.cyan{border-color: rgba(61,220,255,.35)}
+    .choiceBtn.good{border-color: rgba(89,255,160,.28)}
+    .log{
+      font-family:var(--mono);
+      font-size:12px;
+      line-height:1.5;
+      color:rgba(233,230,255,.88);
+      background: rgba(0,0,0,.25);
+      border:1px dashed rgba(255,255,255,.16);
+      border-radius:18px;
+      padding:12px;
+      max-height:340px;
+      overflow:auto;
+      white-space:pre-wrap;
+    }
+    .kbd{
+      font-family:var(--mono);
+      padding:2px 6px;border-radius:8px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.35);
+      font-size:12px;
+      color:rgba(233,230,255,.95);
+    }
+    .modal{
+      position:fixed; inset:0;
+      display:none;
+      align-items:center; justify-content:center;
+      padding:16px;
+      background: rgba(0,0,0,.66);
+      z-index:1000;
+    }
+    .modal.show{display:flex}
+    .mBox{
+      max-width:760px;width:100%;
+      background: rgba(15,13,22,.92);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:22px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .mHd{
+      padding:16px;
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,0));
+    }
+    .mTitle{margin:0;font-size:16px;font-weight:950}
+    .mBd{padding:16px}
+    .reveal{
+      border-radius:18px;
+      border:1px dashed rgba(255,255,255,.22);
+      background: rgba(255,255,255,.03);
+      padding:14px;
+      line-height:1.65;
+      font-size:14px;
+    }
+    .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px}
+    .small{color:var(--muted);font-size:12px;line-height:1.45}
+  </style>
+</head>
+<body class="scanlines">
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Escape the Upside Down</h1>
+          <div class="sub">Creepy, branching choices. Make it out… and claim what’s waiting in Hawkins.</div>
+        </div>
+      </div>
+      <div class="pillrow">
+        <div class="pill">Scene: <strong id="sceneCount">1/7</strong></div>
+        <div class="pill">Danger: <strong id="dangerText">2</strong>/10</div>
+        <button class="btn" id="saveBtn" title="Save on this device">Save</button>
+        <button class="btn" id="resetBtn" title="Reset progress on this device">Reset</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="grid">
+      <section class="card">
+        <div class="hd">
+          <h2 class="title">The Room Between Worlds</h2>
+          <p class="hint">
+            Choose carefully. Some choices increase <span class="kbd">Danger</span>.
+            If Danger hits <span class="kbd">10</span>, the Upside Down keeps you.
+          </p>
+        </div>
+        <div class="bd">
+          <div class="screen">
+            <div class="screenTop">
+              <div class="sceneName" id="sceneName">SCENE</div>
+              <div class="meterRow">
+                <div class="meter">
+                  SAFE
+                  <div class="bar"><div class="fill safe" id="safeFill"></div></div>
+                </div>
+                <div class="meter">
+                  DANGER
+                  <div class="bar"><div class="fill" id="dangerFill"></div></div>
+                </div>
+              </div>
+            </div>
+            <div class="screenBody">
+              <p class="story" id="story"></p>
+            </div>
+            <div class="choices" id="choices"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="hd">
+          <h2 class="title">Hawkins Signal Log</h2>
+          <p class="hint">The game saves your path here. (It gets creepier as you go.)</p>
+        </div>
+        <div class="bd">
+          <div class="log" id="log"></div>
+          <div class="divider"></div>
+          <div class="small">
+            Tip: If the page ever shows a plain white README-style screen, your <span class="kbd">index.html</span> is not in the repo root.
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<!-- Modal -->
+<div class="modal" id="modal" role="dialog" aria-modal="true">
+  <div class="mBox">
+    <div class="mHd">
+      <div>
+        <p class="mTitle" id="mTitle">Recovered</p>
+        <div class="small" id="mSub">A reward waits beyond the veil…</div>
+      </div>
+      <button class="btn" id="closeModal">Close</button>
+    </div>
+    <div class="mBd">
+      <div class="reveal" id="mBody"></div>
+      <div class="row">
+        <button class="btn red" id="openOtherBtn">Open the other box</button>
+      </div>
+      <p class="small" id="mNote" style="margin-top:10px;"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // =========================
+  // CONFIG
+  // =========================
+  const CONFIG = {
+    prizeA: "LEGO Creel House",
+    prizeB: "Dyson vacuum",
+    loveNote: "No matter what world you end up in… I choose you. Every time.",
+    storageKey: "upside_down_escape_v2"
+  };
+
+  // =========================
+  // SCENES (7 total)
+  // Each choice: { text, next, dangerDelta, log }
+  // next can be a scene id OR special: "DEFEAT" / "SAFE_ROOM"
+  // =========================
+  const SCENES = [
+    {
+      id: 1,
+      name: "SCENE 1 — THE RIP",
+      text:
+`Something tears open in the air — like fabric splitting.
+A breath of cold hits your face. The world… shifts.
+
+You land on damp floorboards.
+The wallpaper is wrong. The air tastes like metal.
+Somewhere far away… a slow clock chimes.
+
+You are not alone.`,
+      choices: [
+        { text:"Move toward the clock sound (it might be a landmark).", next:2, dangerDelta:+1, log:"You follow the clock. The darkness seems to lean closer." },
+        { text:"Stay still. Listen. Let the Upside Down reveal itself first.", next:2, dangerDelta:+0, log:"You hold your breath. Listening becomes the only safe thing." },
+        { text:"Call out: “Hello?” (your voice echoes too long).", next:2, dangerDelta:+2, log:"Your voice travels… and something answers with silence." }
+      ]
+    },
+    {
+      id: 2,
+      name: "SCENE 2 — THE HALLWAY",
+      text:
+`A hallway stretches ahead. Too long. Too narrow.
+Vines pulse against the walls like veins.
+Your footsteps sound delayed… as if the house is replaying them.
+
+On the floor: a broken flashlight.
+On the wall: a smear like a handprint dragged downward.`,
+      choices: [
+        { text:"Pick up the flashlight and try it anyway.", next:3, dangerDelta:+0, log:"The flashlight flickers. It’s weak… but it’s something." },
+        { text:"Avoid the handprint. Walk along the far wall.", next:3, dangerDelta:+1, log:"You keep your distance. The stain looks fresh." },
+        { text:"Touch the handprint (you shouldn’t… but you do).", next:3, dangerDelta:+2, log:"Cold spreads into your fingers. You regret it instantly." }
+      ]
+    },
+    {
+      id: 3,
+      name: "SCENE 3 — THE SOUND",
+      text:
+`A wet shuffle.
+Then… another.
+
+Not fast. Not human.
+The sound is patient — like it knows you will panic.
+
+Your throat tightens.
+A door stands slightly open.
+A staircase climbs into blackness.`,
+      choices: [
+        { text:"Slip through the open door and close it quietly.", next:4, dangerDelta:+0, log:"You vanish into the room. The hallway noise keeps moving." },
+        { text:"Run up the stairs (faster is safer… right?).", next:4, dangerDelta:+2, log:"Your feet thud. The house hears you. Something follows." },
+        { text:"Freeze. Don’t move. Don’t breathe.", next:4, dangerDelta:+1, log:"Stillness helps… but the sound pauses. Listening back." }
+      ]
+    },
+    {
+      id: 4,
+      name: "SCENE 4 — THE ROOM OF ECHOES",
+      text:
+`Inside the room: old furniture covered in mold.
+A mirror sits against the wall, cracked but intact.
+The clock chime is louder now, but distorted — wrong pitch.
+
+On a dusty table is a folded note:
+“THE EXIT DOESN’T OPEN FOR FEAR.”`,
+      choices: [
+        { text:"Read the note aloud (as if it’s a rule).", next:5, dangerDelta:+0, log:"You speak. The air changes — like it’s listening to rules." },
+        { text:"Look into the cracked mirror.", next:5, dangerDelta:+1, log:"Your reflection lags behind you. It smiles late." },
+        { text:"Ignore everything. Push forward toward the chime.", next:5, dangerDelta:+2, log:"You choose speed over sense. The Upside Down likes that." }
+      ]
+    },
+    {
+      id: 5,
+      name: "SCENE 5 — THE SIGNAL",
+      text:
+`A faint radio hiss crackles from somewhere nearby.
+It’s not a full voice — more like a memory of one.
+
+Between the hiss, you catch a word:
+“…Hawkins…”
+
+The chime stops.
+
+Silence is worse.`,
+      choices: [
+        { text:"Follow the radio hiss.", next:6, dangerDelta:+0, log:"You follow the signal. The world feels slightly less wrong." },
+        { text:"Follow the silence (you trust your instincts).", next:6, dangerDelta:+1, log:"You move into silence. It wraps around you like water." },
+        { text:"Shout “Hawkins!” back into the dark.", next:6, dangerDelta:+2, log:"Your voice bounces. The darkness bounces back." }
+      ]
+    },
+    {
+      id: 6,
+      name: "SCENE 6 — THE DOOR",
+      text:
+`A door appears where there wasn’t one before.
+Its edges glow faintly — not light, more like… warmth.
+
+The vines around it recoil as if the door is dangerous to them.
+
+A final message scratches into the wood:
+“CHOOSE.”`,
+      choices: [
+        { text:"Place your hand on the door and push through.", next:"SAFE_ROOM", dangerDelta:+0, log:"The warmth spreads. The door gives way." },
+        { text:"Hesitate. Listen one more time.", next:7, dangerDelta:+1, log:"You hesitate. Hesitation has a cost here." },
+        { text:"Turn around (just to check).", next:"DEFEAT_CHECK", dangerDelta:+2, log:"You turn. The hallway behind you is no longer empty." }
+      ]
+    },
+    {
+      id: 7,
+      name: "SCENE 7 — THE LAST TEST",
+      text:
+`The clock chimes again — right behind you now.
+The air is colder.
+Your breath fogs.
+A shadow peels itself off the wall like it’s been waiting.
+
+The door is still ahead.
+
+You have one chance.`,
+      choices: [
+        { text:"Run to the door and don’t look back.", next:"SAFE_ROOM", dangerDelta:+0, log:"You run. You do not look back. You are not taking any souvenirs." },
+        { text:"Try to hide in the room (it won’t find you… maybe).", next:"DEFEAT", dangerDelta:+3, log:"You hide. The shadow doesn’t search. It simply… arrives." },
+        { text:"Slam the door and lock it (you can trap it).", next:"DEFEAT", dangerDelta:+2, log:"You grab the handle. The handle feels like bone." }
+      ]
+    }
+  ];
+
+  // =========================
+  // STATE
+  // =========================
+  const state = {
+    sceneId: 1,
+    danger: 2,          // starts a little tense
+    log: [],
+    openedA: false,
+    openedB: false
+  };
+
+  // =========================
+  // HELPERS
+  // =========================
+  const $ = (sel) => document.querySelector(sel);
+
+  function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+  function save(){
+    localStorage.setItem(CONFIG.storageKey, JSON.stringify(state));
+    toast("Saved.");
+    render();
+  }
+  function load(){
+    const raw = localStorage.getItem(CONFIG.storageKey);
+    if(!raw) return;
+    try{
+      const data = JSON.parse(raw);
+      Object.assign(state, data);
+    }catch(e){}
+  }
+  function reset(){
+    localStorage.removeItem(CONFIG.storageKey);
+    state.sceneId = 1;
+    state.danger = 2;
+    state.log = [];
+    state.openedA = false;
+    state.openedB = false;
+    render();
+    toast("Reset.");
+  }
+
+  function toast(text){
+    const t = document.createElement("div");
+    t.className = "pill";
+    t.textContent = text;
+    t.style.position="fixed";
+    t.style.right="16px";
+    t.style.bottom="16px";
+    t.style.zIndex="99999";
+    t.style.background="rgba(15,13,22,.92)";
+    t.style.boxShadow="0 18px 50px rgba(0,0,0,.6)";
+    document.body.appendChild(t);
+    setTimeout(()=>{ t.style.opacity="0"; t.style.transition=".35s"; }, 900);
+    setTimeout(()=>t.remove(), 1400);
+  }
+
+  function currentScene(){
+    return SCENES.find(s => s.id === state.sceneId);
+  }
+
+  function addLog(line){
+    state.log.push(line);
+    if(state.log.length > 50) state.log = state.log.slice(-50);
+  }
+
+  function defeat(reason){
+    addLog("⚠ " + reason);
+    state.sceneId = 1;
+    state.danger = 2;
+    addLog("…You wake up again at the rip. The Upside Down resets.");
+    save();
+  }
+
+  // =========================
+  // RENDER
+  // =========================
+  function render(){
+    const sc = currentScene();
+    $("#sceneName").textContent = sc.name;
+    $("#sceneCount").textContent = `${SCENES.indexOf(sc)+1}/7`;
+
+    $("#dangerText").textContent = state.danger;
+
+    // meters
+    const dangerPct = clamp((state.danger/10)*100, 0, 100);
+    const safePct = clamp(100 - dangerPct, 0, 100);
+    $("#dangerFill").style.width = dangerPct + "%";
+    $("#safeFill").style.width = safePct + "%";
+
+    // story typewriter effect (simple)
+    typeText($("#story"), sc.text);
+
+    // log
+    $("#log").textContent = state.log.join("\n") || "— awaiting signal —";
+
+    // choices
+    const choices = $("#choices");
+    choices.innerHTML = "";
+
+    sc.choices.forEach((c) => {
+      const btn = document.createElement("button");
+      btn.className = "choiceBtn";
+      // subtle styling by risk
+      if(c.dangerDelta >= 2) btn.classList.add("red");
+      else if(c.dangerDelta === 1) btn.classList.add("cyan");
+      else btn.classList.add("good");
+
+      btn.textContent = c.text;
+
+      btn.addEventListener("click", () => {
+        // update danger
+        state.danger = clamp(state.danger + (c.dangerDelta || 0), 0, 10);
+
+        // add log
+        addLog("• " + c.log);
+        addLog("Danger now: " + state.danger + "/10");
+
+        // special handlers
+        if(state.danger >= 10){
+          defeat("Danger reached 10/10. Something found you.");
+          return;
+        }
+
+        if(c.next === "DEFEAT"){
+          defeat("You made the wrong move. The darkness closes in.");
+          return;
+        }
+
+        if(c.next === "DEFEAT_CHECK"){
+          // a slightly scary check: if danger already high, instant defeat
+          if(state.danger >= 7){
+            defeat("You looked back at the worst possible time.");
+            return;
+          } else {
+            state.sceneId = 7;
+            save();
+            return;
+          }
+        }
+
+        if(c.next === "SAFE_ROOM"){
+          addLog("✅ You reached the door. Warmth returns.");
+          save();
+          showSafeRoom();
+          return;
+        }
+
+        // normal scene progression
+        state.sceneId = c.next;
+        save();
+      });
+
+      choices.appendChild(btn);
+    });
+  }
+
+  // typewriter: cancels previous typing
+  let typingToken = 0;
+  function typeText(el, text){
+    const token = ++typingToken;
+    el.textContent = "";
+    const speed = 9; // ms per char feel
+    let i = 0;
+    function tick(){
+      if(token !== typingToken) return;
+      i++;
+      el.textContent = text.slice(0, i);
+      if(i < text.length){
+        setTimeout(tick, speed);
+      }
+    }
+    tick();
+  }
+
+  // =========================
+  // SAFE ROOM / PRIZE REVEAL
+  // =========================
+  function showModal(title, sub, bodyHtml, note){
+    $("#mTitle").textContent = title;
+    $("#mSub").textContent = sub;
+    $("#mBody").innerHTML = bodyHtml;
+    $("#mNote").textContent = note || "";
+    $("#modal").classList.add("show");
+
+    // enable/disable open-other
+    const bothOpened = state.openedA && state.openedB;
+    $("#openOtherBtn").disabled = bothOpened;
+    $("#openOtherBtn").textContent = bothOpened ? "Both opened" : "Open the other box";
+  }
+
+  function hideModal(){
+    $("#modal").classList.remove("show");
+  }
+
+  function showSafeRoom(){
+    const body =
+`<b>You step through.</b><br><br>
+The air is warm again. The colours return. Your heartbeat slows.<br><br>
+A table sits under a single light. Two boxes wait.<br>
+One is marked <span class="kbd">A</span>. One is marked <span class="kbd">B</span>.<br><br>
+<b>Choose.</b>`;
+
+    showModal(
+      "Hawkins Safe Room",
+      "You escaped the Upside Down.",
+      `<div class="reveal">${body}</div>
+       <div style="margin-top:12px; display:grid; gap:10px;">
+         <button class="btn red" id="openA">${state.openedA ? "Box A opened" : "Open Box A"}</button>
+         <button class="btn cyan" id="openB">${state.openedB ? "Box B opened" : "Open Box B"}</button>
+       </div>`,
+      "P.S. You’re allowed to open both. Hawkins likes balance."
+    );
+
+    // wire up buttons inside modal (after HTML injection)
+    setTimeout(() => {
+      const a = document.getElementById("openA");
+      const b = document.getElementById("openB");
+      if(a) a.disabled = state.openedA;
+      if(b) b.disabled = state.openedB;
+
+      a?.addEventListener("click", () => revealPrize("A"));
+      b?.addEventListener("click", () => revealPrize("B"));
+    }, 0);
+  }
+
+  function revealPrize(which){
+    if(which === "A"){
+      state.openedA = true;
+      addLog("🎁 Box A opened: " + CONFIG.prizeA);
+      save();
+      showModal(
+        "Box A Opened",
+        "A reward from the other side…",
+        `<div class="reveal">
+          <b>Reward:</b> ${CONFIG.prizeA}<br><br>
+          ${CONFIG.loveNote}
+        </div>`,
+        "Open the other box too. The Upside Down doesn’t get the last word."
+      );
+    }else{
+      state.openedB = true;
+      addLog("🎁 Box B opened: " + CONFIG.prizeB);
+      save();
+      showModal(
+        "Box B Opened",
+        "Something to protect the present…",
+        `<div class="reveal">
+          <b>Reward:</b> ${CONFIG.prizeB}<br><br>
+          ${CONFIG.loveNote}
+        </div>`,
+        "Open the other box too. Hawkins rewards the brave."
+      );
+    }
+    render();
+  }
+
+  // =========================
+  // Events
+  // =========================
+  $("#saveBtn").addEventListener("click", save);
+  $("#resetBtn").addEventListener("click", reset);
+
+  $("#closeModal").addEventListener("click", hideModal);
+  $("#modal").addEventListener("click", (e)=>{ if(e.target.id === "modal") hideModal(); });
+
+  $("#openOtherBtn").addEventListener("click", ()=>{
+    hideModal();
+    if(state.openedA && !state.openedB) revealPrize("B");
+    else if(state.openedB && !state.openedA) revealPrize("A");
+    else showSafeRoom();
+  });
+
+  // Boot
+  load();
+  if(!state.log.length){
+    addLog("— signal acquired —");
+    addLog("If you feel watched… you probably are.");
+  }
+  render();
+</script>
+</body>
+</html>
